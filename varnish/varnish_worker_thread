@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+# Varnish3.0 worker thread logger plugin
+#
+# N worker thread not created
+# N worker thread limited
+# N dropped work request
+
+$ENV{PATH} = "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin";
+
+sub pop_stat {
+    my %stat=(), $key, $val;
+    foreach (`varnishstat -1 | grep wrk`){
+        chomp $_;
+        if ($_ =~ /^([\w\.]+)\s+(\d+)\s+/) {
+            $key = $1;
+            $val = $2;
+            $stat{"$key"} = $val;
+        }
+    }
+    return %stat;
+}
+
+sub print_value {
+    my %stat = @_;
+    my $n_wrk_failed = $stat{"n_wrk_failed"};
+    my $n_wrk_max = $stat{"n_wrk_max"};
+    my $n_wrk_drop = $stat{"n_wrk_drop"};
+    print "n_wrk_failed.value $n_wrk_failed\n";
+    print "n_wrk_max.value $n_wrk_max\n";
+    print "n_wrk_drop.value $n_wrk_drop\n";
+}
+
+
+sub print_config {
+    print "graph_title worker thread \n";
+    print "graph_vlabel count \n";
+    print "graph_category varnish\n";
+    print "graph_info varnish worker thread\n";
+
+    print "n_wrk_failed.label worker threads not created \n";
+    print "n_wrk_failed.info worker threads not created \n";
+    print "n_wrk_failed.type GAUGE\n";
+    print "n_wrk_failed.graph yes\n";
+
+    print "n_wrk_max.label worker threads limited\n";
+    print "n_wrk_max.info worker threads limited\n";
+    print "n_wrk_max.type GAUGE\n";
+    print "n_wrk_max.graph yes\n";
+
+    print "n_wrk_drop.label drop work requests\n";
+    print "n_wrk_drop.info drop work requests\n";
+    print "n_wrk_drop.type GAUGE\n";
+    print "n_wrk_drop.graph yes\n";
+}
+
+
+if($ARGV[0] eq "autoconfig"){
+    print "yes\n";
+}elsif($ARGV[0] eq "config"){
+    &print_config;
+}else{
+    print_value &pop_stat ;
+}
